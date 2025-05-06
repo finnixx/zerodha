@@ -41,14 +41,51 @@ const users: User[] = [
 const bids: Order[] = [];
 const asks: Order[] = [];
 
-// Dummy fillOrders function to avoid runtime error (you should implement your logic)
-function fillOrders(
-  side: string,
-  price: number,
-  quantity: number,
-  userId: string
-): number {
-  return quantity; // for now, assume nothing filled
+function flipBalances(userId1: string, userId2: string, quantity: number, price: number) {
+  let user1 = users.find((x) => x.id === userId1);
+  let user2 = users.find((x) => x.id === userId2);
+  if (!user1 || !user2) {
+    return;
+  }
+
+  user1.balances[TICKER] -= quantity;
+  user2.balances[TICKER] += quantity;
+  user1.balances["USD"] += quantity * price;
+  user2.balances["USD"] -= quantity * price;
+}
+
+function fillOrders(side: string, price: number, quantity: number, userId: string): number {
+  let remainingQuantity = quantity;
+  if (side === "bid") {
+    for (let i = asks.length - 1; i >= 0; i--) {
+      if (asks[i].price > price) continue;
+
+      if (asks[i].quantity > remainingQuantity) {
+        asks[i].quantity -= remainingQuantity;
+        flipBalances(asks[i].userId, userId, remainingQuantity, price);
+        return 0;
+      } else {
+        remainingQuantity -= asks[i].quantity;
+        flipBalances(asks[i].userId, userId, asks[i].quantity, price);
+        asks.pop();
+      }
+    }
+  } else {
+    for (let i = bids.length - 1; i >= 0; i--) {
+      if (bids[i].price < price) continue;
+
+      if (bids[i].quantity > remainingQuantity) {
+        bids[i].quantity -= remainingQuantity;
+        flipBalances(bids[i].userId, userId, remainingQuantity, price);
+        return 0;
+      } else {
+        remainingQuantity -= bids[i].quantity;
+        flipBalances(bids[i].userId, userId, bids[i].quantity, price);
+        bids.pop();
+      }
+    }
+  }
+  return remainingQuantity;
 }
 
 app.post("/order", (req: any, res: any) => {
@@ -59,7 +96,7 @@ app.post("/order", (req: any, res: any) => {
 
   const remainingQty = fillOrders(side, price, quantity, userId);
 
-  if (remainingQty == 0) {
+  if (remainingQty === 0) {
     res.json({ filledQuantity: quantity });
     return;
   }
@@ -70,7 +107,6 @@ app.post("/order", (req: any, res: any) => {
       price: price,
       quantity: remainingQty,
     });
-
     bids.sort((a, b) => (a.price < b.price ? 1 : -1));
   } else {
     asks.push({
