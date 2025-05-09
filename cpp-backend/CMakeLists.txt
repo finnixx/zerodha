@@ -1,30 +1,30 @@
-cmake_minimum_required(VERSION 3.14)
-project(OrderBookProject)
+cmake_minimum_required(VERSION 3.22)  # Ensure we're using at least CMake 3.22
 
-# Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+# Project name and version
+project(cpp_backend VERSION 1.0)
 
-# Use folders to organize in IDEs
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+# Set C++ standard to 20 (ensure modern C++ features are available)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Include header files
+find_package(Boost 1.88 REQUIRED COMPONENTS atomic)
+
 include_directories(include)
-find_package(Boost 1.70 REQUIRED)
-# Source files
-file(GLOB_RECURSE SOURCES
-    src/*.cpp
-)
 
-# Executable
-add_executable(order_book ${SOURCES})
+# Add the source files to the project
+add_executable(cpp_backend src/main.cpp)
+target_include_directories(cpp_backend PRIVATE include)
 
-# For multithreading support
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
-target_link_libraries(order_book PRIVATE Threads::Threads)
+# Link only the required Boost components (atomic in this case)
+target_link_libraries(cpp_backend Boost::atomic)
 
-# Treat warnings as errors (optional)
-# target_compile_options(order_book PRIVATE -Wall -Wextra -Werror)
+# # Ensure we use pthread support on Linux/macOS (for thread support)
+# if (CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+#     target_compile_options(cpp_backend PRIVATE -std=c++20 -pthread)
+# elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+#     target_compile_options(cpp_backend PRIVATE /std:c++20)
+# endif()
+
+# # Optionally, set output directory for executables
+# set_target_properties(cpp_backend PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
